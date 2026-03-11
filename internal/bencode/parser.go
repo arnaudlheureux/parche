@@ -55,14 +55,39 @@ func decodeAt(data []byte, pos int) (any, int, error) {
 
 // decodeString parses: <length>:<bytes>
 func decodeString(data []byte, pos int) (string, int, error) {
+	start := pos
+	length := 0
 
-	// TODO:
-	// 1. read digits until ':'
-	// 2. parse the length
-	// 3. read the string bytes
-	// 4. return the string and next position
+	// Parse the length prefix
+	for pos < len(data) && data[pos] != ':' {
+		if data[pos] < '0' || data[pos] > '9' {
+			return "", pos, fmt.Errorf("invalid string length character %q at position %d", data[pos], pos)
+		}
 
-	return "", pos, fmt.Errorf("decodeString not implemented")
+		digit := int(data[pos] - '0')
+		length = length*10 + digit
+		pos++
+	}
+
+	// Ensure we actually read at least one digit
+	if pos == start {
+		return "", pos, fmt.Errorf("missing string length")
+	}
+
+	// Ensure we found the ':' delimiter
+	if pos >= len(data) || data[pos] != ':' {
+		return "", pos, fmt.Errorf("missing ':' after string length")
+	}
+
+	pos++ // skip ':'
+
+	// Ensure the declared payload fits in the remaining input
+	if pos+length > len(data) {
+		return "", pos, fmt.Errorf("declared string length exceeds remaining input")
+	}
+
+	result := string(data[pos : pos+length])
+	return result, pos + length, nil
 }
 
 // decodeInt parses: i<number>e
@@ -120,7 +145,7 @@ func decodeList(data []byte, pos int) ([]any, int, error) {
 	// 2. repeatedly call decodeAt
 	// 3. stop when reaching 'e'
 
-	return nil, pos, fmt.Errorf("decodeList not implemented")
+	return nil, pos, nil
 }
 
 // decodeDict parses: d<key><value>e

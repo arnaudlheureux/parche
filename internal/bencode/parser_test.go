@@ -118,6 +118,17 @@ func TestDecodeStringHello(t *testing.T) {
 	}
 }
 
+func TestDecodeStringSingleCharacter(t *testing.T) {
+	got, err := Decode([]byte("1:a"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	if got != "a" {
+		t.Fatalf("got %v, want a", got)
+	}
+}
+
 func TestDecodeStringEmpty(t *testing.T) {
 	got, err := Decode([]byte("0:"))
 	if err != nil {
@@ -140,6 +151,24 @@ func TestDecodeStringLong(t *testing.T) {
 	}
 }
 
+func TestDecodeStringMultiDigitLength(t *testing.T) {
+	got, err := Decode([]byte("10:helloworld"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	if got != "helloworld" {
+		t.Fatalf("got %v, want helloworld", got)
+	}
+}
+
+func TestDecodeStringMissingLength(t *testing.T) {
+	_, err := Decode([]byte(":spam"))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
 func TestDecodeStringMissingColon(t *testing.T) {
 	_, err := Decode([]byte("4spam"))
 	if err == nil {
@@ -154,6 +183,20 @@ func TestDecodeStringTooShort(t *testing.T) {
 	}
 }
 
+func TestDecodeStringDeclaredLengthTooLong(t *testing.T) {
+	_, err := Decode([]byte("12:short"))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
+func TestDecodeStringEmptyPayloadButNonZeroLength(t *testing.T) {
+	_, err := Decode([]byte("4:"))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
 func TestDecodeStringInvalidLength(t *testing.T) {
 	_, err := Decode([]byte("x:spam"))
 	if err == nil {
@@ -161,8 +204,22 @@ func TestDecodeStringInvalidLength(t *testing.T) {
 	}
 }
 
+func TestDecodeStringInvalidLengthCharacterAfterDigit(t *testing.T) {
+	_, err := Decode([]byte("4a:spam"))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
 func TestDecodeStringTrailingData(t *testing.T) {
 	_, err := Decode([]byte("4:spamjunk"))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
+func TestDecodeStringZeroLengthTrailingData(t *testing.T) {
+	_, err := Decode([]byte("0:junk"))
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
