@@ -224,3 +224,212 @@ func TestDecodeStringZeroLengthTrailingData(t *testing.T) {
 		t.Fatalf("expected error, got nil")
 	}
 }
+
+//
+// LIST TESTS
+//
+
+func TestDecodeListEmpty(t *testing.T) {
+	got, err := Decode([]byte("le"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	list, ok := got.([]any)
+	if !ok {
+		t.Fatalf("got %T, want []any", got)
+	}
+
+	if len(list) != 0 {
+		t.Fatalf("got length %d, want 0", len(list))
+	}
+}
+
+func TestDecodeListStrings(t *testing.T) {
+	got, err := Decode([]byte("l4:spam4:eggse"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	list := got.([]any)
+
+	if len(list) != 2 {
+		t.Fatalf("got length %d, want 2", len(list))
+	}
+
+	if list[0] != "spam" || list[1] != "eggs" {
+		t.Fatalf("unexpected list contents: %#v", list)
+	}
+}
+
+func TestDecodeListIntegers(t *testing.T) {
+	got, err := Decode([]byte("li1ei2ei3ee"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	list := got.([]any)
+
+	if len(list) != 3 {
+		t.Fatalf("got length %d, want 3", len(list))
+	}
+
+	if list[0] != 1 || list[1] != 2 || list[2] != 3 {
+		t.Fatalf("unexpected list contents: %#v", list)
+	}
+}
+
+func TestDecodeListMixedTypes(t *testing.T) {
+	got, err := Decode([]byte("l4:spami42e3:abce"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	list := got.([]any)
+
+	if len(list) != 3 {
+		t.Fatalf("got length %d, want 3", len(list))
+	}
+
+	if list[0] != "spam" || list[1] != 42 || list[2] != "abc" {
+		t.Fatalf("unexpected list contents: %#v", list)
+	}
+}
+
+func TestDecodeListUnterminated(t *testing.T) {
+	_, err := Decode([]byte("l4:spam4:eggs"))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
+//
+// DICTIONARY TESTS
+//
+
+func TestDecodeDictEmpty(t *testing.T) {
+	got, err := Decode([]byte("de"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	dict, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("got %T, want map[string]any", got)
+	}
+
+	if len(dict) != 0 {
+		t.Fatalf("got length %d, want 0", len(dict))
+	}
+}
+
+func TestDecodeDictBasic(t *testing.T) {
+	got, err := Decode([]byte("d3:cow3:moo4:spam4:eggse"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	dict, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("got %T, want map[string]any", got)
+	}
+
+	if len(dict) != 2 {
+		t.Fatalf("got length %d, want 2", len(dict))
+	}
+
+	if dict["cow"] != "moo" {
+		t.Fatalf("got %v, want moo", dict["cow"])
+	}
+
+	if dict["spam"] != "eggs" {
+		t.Fatalf("got %v, want eggs", dict["spam"])
+	}
+}
+
+func TestDecodeDictMixedValues(t *testing.T) {
+	got, err := Decode([]byte("d3:fooi42e3:bar4:spame"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	dict, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("got %T, want map[string]any", got)
+	}
+
+	if len(dict) != 2 {
+		t.Fatalf("got length %d, want 2", len(dict))
+	}
+
+	if dict["foo"] != 42 {
+		t.Fatalf("got %v, want 42", dict["foo"])
+	}
+
+	if dict["bar"] != "spam" {
+		t.Fatalf("got %v, want spam", dict["bar"])
+	}
+}
+
+func TestDecodeDictWithList(t *testing.T) {
+	got, err := Decode([]byte("d4:listli1ei2ei3eee"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	dict, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("got %T, want map[string]any", got)
+	}
+
+	rawList, ok := dict["list"]
+	if !ok {
+		t.Fatalf("missing key %q", "list")
+	}
+
+	list, ok := rawList.([]any)
+	if !ok {
+		t.Fatalf("got %T, want []any", rawList)
+	}
+
+	if len(list) != 3 {
+		t.Fatalf("got length %d, want 3", len(list))
+	}
+
+	if list[0] != 1 || list[1] != 2 || list[2] != 3 {
+		t.Fatalf("unexpected list contents: %#v", list)
+	}
+}
+
+func TestDecodeDictWithNestedDict(t *testing.T) {
+	got, err := Decode([]byte("d5:innerd3:fooi7eee"))
+	if err != nil {
+		t.Fatalf("Decode returned error: %v", err)
+	}
+
+	dict, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("got %T, want map[string]any", got)
+	}
+
+	rawInner, ok := dict["inner"]
+	if !ok {
+		t.Fatalf("missing key %q", "inner")
+	}
+
+	inner, ok := rawInner.(map[string]any)
+	if !ok {
+		t.Fatalf("got %T, want map[string]any", rawInner)
+	}
+
+	if inner["foo"] != 7 {
+		t.Fatalf("got %v, want 7", inner["foo"])
+	}
+}
+
+func TestDecodeDictUnterminated(t *testing.T) {
+	_, err := Decode([]byte("d3:cow3:moo"))
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}

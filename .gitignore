@@ -1,0 +1,29 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build output
+*.test
+*.out
+
+# Coverage files
+coverage.out
+*.coverprofile
+
+# Dependency directories (not common anymore but safe)
+vendor/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.log
+tmp/

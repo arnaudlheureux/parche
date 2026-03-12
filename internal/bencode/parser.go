@@ -139,23 +139,50 @@ func decodeInt(data []byte, pos int) (int, int, error) {
 
 // decodeList parses: l<values>e
 func decodeList(data []byte, pos int) ([]any, int, error) {
+	pos++ // skip 'l'
+	result := []any{}
 
-	// TODO:
-	// 1. skip 'l'
-	// 2. repeatedly call decodeAt
-	// 3. stop when reaching 'e'
+	for pos < len(data) && data[pos] != 'e' {
+		value, next, err := decodeAt(data, pos)
+		if err != nil {
+			return nil, pos, err
+		}
 
-	return nil, pos, nil
+		result = append(result, value)
+		pos = next
+	}
+
+	if pos >= len(data) {
+		return nil, pos, fmt.Errorf("unterminated list")
+	}
+
+	pos++ // skip closing 'e'
+	return result, pos, nil
 }
 
-// decodeDict parses: d<key><value>e
 func decodeDict(data []byte, pos int) (map[string]any, int, error) {
+	pos++ // skip 'd'
+	result := map[string]any{}
 
-	// TODO:
-	// 1. skip 'd'
-	// 2. read key (must be string)
-	// 3. read value (using decodeAt)
-	// 4. repeat until 'e'
+	for pos < len(data) && data[pos] != 'e' {
+		key, nextKeyPos, err := decodeString(data, pos)
+		if err != nil {
+			return nil, nextKeyPos, err
+		}
 
-	return nil, pos, fmt.Errorf("decodeDict not implemented")
+		value, nextValuePos, err := decodeAt(data, nextKeyPos)
+		if err != nil {
+			return nil, nextValuePos, err
+		}
+
+		result[key] = value
+		pos = nextValuePos
+	}
+
+	if pos >= len(data) {
+		return nil, pos, fmt.Errorf("unterminated dictionary")
+	}
+
+	pos++ // skip closing 'e'
+	return result, pos, nil
 }
